@@ -439,18 +439,23 @@
       <div class="card-title">業務内容</div>
       <div class="col-hd"><span>内容</span><span>時間</span><span></span></div>
       <div class="work-row">
-        <div class="work-label">図面との相違確認</div>
-        <input class="min-input" type="number" id="min_zumen" min="0" placeholder="0" oninput="calcTotal()" />
+        <div class="work-label">出来高確認</div>
+        <input class="min-input" type="number" id="min_dekidaka" min="0" placeholder="0" oninput="calcTotal()" />
         <div class="unit-label">分</div>
       </div>
       <div class="work-row">
-        <div class="work-label">出来高計測</div>
-        <input class="min-input" type="number" id="min_dekidaka" min="0" placeholder="0" oninput="calcTotal()" />
+        <div class="work-label">現地調査</div>
+        <input class="min-input" type="number" id="min_chosa" min="0" placeholder="0" oninput="calcTotal()" />
         <div class="unit-label">分</div>
       </div>
       <div class="work-row">
         <div class="work-label">職人MT</div>
         <input class="min-input" type="number" id="min_shokunin" min="0" placeholder="0" oninput="calcTotal()" />
+        <div class="unit-label">分</div>
+      </div>
+      <div class="work-row">
+        <div class="work-label">顧客MT</div>
+        <input class="min-input" type="number" id="min_kokyaku" min="0" placeholder="0" oninput="calcTotal()" />
         <div class="unit-label">分</div>
       </div>
     </div>
@@ -460,11 +465,6 @@
       <div class="col-hd"><span>内容</span><span>時間</span><span></span></div>
       <div id="otherList"></div>
       <button class="add-btn" onclick="addOther()">＋ 行を追加</button>
-    </div>
-
-    <div class="card">
-      <div class="card-title">時間超過理由</div>
-      <textarea id="overtimeReason" placeholder="時間超過の場合は理由を記入"></textarea>
     </div>
 
     <div class="card">
@@ -483,21 +483,6 @@
           <div><span class="summary-val elapsed-na" id="elapsedVal">―</span></div>
         </div>
       </div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">
-        写真添付
-        <span class="photo-count" id="photoCount" style="display:none;">0</span>
-      </div>
-      <div class="photo-drop-area" id="dropArea"
-        ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
-        <input type="file" id="photoInput" accept="image/*" multiple onchange="onFileSelect(event)" />
-        <div class="drop-icon">📷</div>
-        <div class="drop-text">タップして写真を選択</div>
-        <div class="drop-sub">複数選択・ドラッグ＆ドロップ対応</div>
-      </div>
-      <div class="photo-grid" id="photoGrid"></div>
     </div>
 
     <button class="gen-btn" id="saveBtn" onclick="saveReport()">
@@ -810,9 +795,10 @@ function renderOther(){
 // ── Calc ──────────────────────────────────────────
 function calcTotal(){
   const fixed=[
-    +(document.getElementById('min_zumen').value)||0,
     +(document.getElementById('min_dekidaka').value)||0,
+    +(document.getElementById('min_chosa').value)||0,
     +(document.getElementById('min_shokunin').value)||0,
+    +(document.getElementById('min_kokyaku').value)||0,
   ];
   const others=otherRows.reduce((s,r)=>s+(+r.minutes||0),0);
   const total=fixed.reduce((a,b)=>a+b,0)+others;
@@ -872,9 +858,10 @@ async function saveReport(){
   const depart  =document.getElementById('departTime').value||'―';
   const site    =document.getElementById('siteName').value||'―';
   const address =document.getElementById('siteAddress').value||'―';
-  const zumen   =+(document.getElementById('min_zumen').value)||0;
   const dekidaka=+(document.getElementById('min_dekidaka').value)||0;
+  const chosa   =+(document.getElementById('min_chosa').value)||0;
   const shokunin=+(document.getElementById('min_shokunin').value)||0;
+  const kokyaku =+(document.getElementById('min_kokyaku').value)||0;
   const overtime=document.getElementById('overtimeReason').value;
   const total   =calcTotal();
   const elapsed =calcElapsed();
@@ -886,7 +873,7 @@ async function saveReport(){
     date, siteName:site, address,
     arrivalTime:arrive, departTime:depart,
     elapsed:elapsed?elapsed.str:'―',
-    min_zumen:zumen, min_dekidaka:dekidaka, min_shokunin:shokunin,
+    min_dekidaka:dekidaka, min_chosa:chosa, min_shokunin:shokunin, min_kokyaku:kokyaku,
     otherWork, total, overtime,
     photoCount:photos.length,
     gpsCoords:gpsLat?`${gpsLat.toFixed(5)}, ${gpsLng.toFixed(5)}`:''
@@ -935,7 +922,7 @@ function buildReportText(p, d){
   rep+=`現場名　: ${p.siteName}\n住所　　: ${p.address}\n`;
   if(p.gpsCoords) rep+=`GPS座標: ${p.gpsCoords}\n`;
   rep+=`\n━━━━━━━━━━━━━━━━━━━━━━━\n■ 業務内容\n\n`;
-  rep+=`図面との相違確認　${p.min_zumen}分\n出来高計測　　　　${p.min_dekidaka}分\n職人MT　　　　　　${p.min_shokunin}分\n`;
+  rep+=`出来高確認　${p.min_dekidaka}分\n現地調査　　${p.min_chosa}分\n職人MT　　　${p.min_shokunin}分\n顧客MT　　　${p.min_kokyaku}分\n`;
   if(p.otherWork) rep+=`\n■ その他\n${p.otherWork}\n`;
   rep+=`\n━━━━━━━━━━━━━━━━━━━━━━━\n業務時間合計: ${p.total}分\n滞在時間　　: ${p.elapsed}\n`;
   if(p.overtime) rep+=`\n時間超過理由:\n${p.overtime}\n`;
