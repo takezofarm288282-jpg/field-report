@@ -798,15 +798,24 @@ function getGPS(){
   btn.disabled=true; btn.innerHTML='<span class="spin" style="border-top-color:var(--gps);border-color:rgba(5,150,105,0.2);"></span>';
   dot.className='gps-dot'; addr.textContent='取得中...';
 
-  navigator.geolocation.getCurrentPosition(async pos=>{
+  // 1回目：高精度で10秒 → ダメなら2回目：精度を下げて20秒（屋内・iPhone対策）
+  const tryGet=(opts)=>new Promise((ok,ng)=>navigator.geolocation.getCurrentPosition(ok,ng,opts));
+  tryGet({enableHighAccuracy:true,timeout:10000,maximumAge:0})
+    .catch(e=>{
+      if(e.code===1) throw e; // 拒否された場合は再試行しない
+      addr.textContent='取得中...（再試行）';
+      return tryGet({enableHighAccuracy:false,timeout:20000,maximumAge:60000});
+    })
+    .then(onGpsOk,onGpsErr);
+
+  async function onGpsOk(pos){
     gpsLat=pos.coords.latitude; gpsLng=pos.coords.longitude;
     const acc=Math.round(pos.coords.accuracy);
     coord.textContent=`${gpsLat.toFixed(5)}, ${gpsLng.toFixed(5)}  ±${acc}m`;
     dot.className='gps-dot ok'; addr.textContent='住所変換中...';
     try{
       const r=await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${gpsLat}&lon=${gpsLng}&accept-language=ja`,
-        {headers:{'User-Agent':'FieldReport/1.0'}});
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${gpsLat}&lon=${gpsLng}&accept-language=ja`);
       if(r.ok){
         const d=await r.json(); const a=d.address||{};
         const parts=[];
@@ -828,13 +837,18 @@ function getGPS(){
       addr.textContent=s; document.getElementById('siteAddress').value=s;
       snack('⚠️ 座標のみ取得');
     }
-  },err=>{
+  }
+  function onGpsErr(err){
     dot.className='gps-dot err';
-    const m={1:'位置情報が拒否されました',2:'GPS信号なし',3:'タイムアウト'};
+    const m={
+      1:'位置情報が許可されていません。スマホの設定で、このブラウザの位置情報を「許可」にしてください（LINEの中で開いている場合はSafari/Chromeで開き直してください）',
+      2:'GPS信号が取れません。屋外に出るか、住所を手入力してください',
+      3:'時間内に取得できませんでした。もう一度押すか、住所を手入力してください'
+    };
     addr.textContent=m[err.code]||'エラー';
-    snack('❌ '+(m[err.code]||err.message));
+    snack('❌ '+({1:'位置情報が許可されていません',2:'GPS信号なし',3:'タイムアウト'}[err.code]||err.message));
     btn.disabled=false; btn.innerHTML='📡 GPS';
-  },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+  }
 }
 
 // ── Other rows ────────────────────────────────────
